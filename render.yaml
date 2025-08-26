@@ -6,4 +6,4 @@ services:
     healthCheckPath: /health
     envVars:
       - key: OPENAI_API_KEY
-        sync: false  # añade el secreto en el Dashboard de Render
+        sync: false
