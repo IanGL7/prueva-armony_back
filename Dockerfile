@@ -1,28 +1,24 @@
-# ---------- Build ----------
-FROM eclipse-temurin:21-jdk AS build
+# ---------- Build stage ----------
+FROM maven:3.9.8-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copia wrapper y POM primero para cachear deps
-COPY .mvn .mvn
-COPY mvnw pom.xml ./
+# Copiamos el POM primero para cachear dependencias
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
 
-# Permisos + quitar CRLF de Windows en mvnw
-RUN chmod +x mvnw && sed -i 's/\r$//' mvnw
+# Ahora el código
+COPY src ./src
 
-# Descarga dependencias (sin tests) y luego copia el código
-RUN ./mvnw -q -DskipTests dependency:go-offline
-COPY src src
+# Empaquetar (jar) sin tests
+RUN mvn -q -DskipTests -ntp package
 
-# Empaqueta jar (sin tests) y sin barra de progreso para ahorrar logs
-RUN ./mvnw -q -DskipTests -ntp package
-
-# ---------- Run ----------
+# ---------- Run stage ----------
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 ENV PORT=8080
 EXPOSE 8080
 
-# Memoria más segura en free tier
+# Memoria más segura para free tier
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
 
 COPY --from=build /app/target/*.jar app.jar
